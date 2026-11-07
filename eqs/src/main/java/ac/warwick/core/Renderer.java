@@ -33,9 +33,12 @@ public class Renderer {
 
     // displays all of the renderables to the screen
     public void render() {
+        SDL_RenderClear(renderer);
         for (Renderable renderable : this.renderables.values()) {
             renderable.render(this);
+            renderable.update();
         }
+        SDL_RenderPresent(renderer);
     }
 
     // adds a renderable resource to the queue of things to be rendered on the
