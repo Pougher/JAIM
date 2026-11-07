@@ -26,7 +26,7 @@ public class Renderer {
         }
 
         // for now, set our default rendering colour to black
-        SDL_SetRenderDrawColor(renderer, (byte)255, (byte)0, (byte)0, (byte)255);
+        SDL_SetRenderDrawColor(renderer, (byte)40, (byte)40, (byte)40, (byte)255);
         SDL_RenderClear(renderer);
         SDL_RenderPresent(renderer);
     }

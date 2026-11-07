@@ -22,41 +22,48 @@ import static io.github.libsdl4j.api.event.SdlEvents.SDL_PollEvent;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_SPACE;
 import static io.github.libsdl4j.api.render.SdlRender.*;
 
+class WFCViewer {
+    private WFC wfc;
+    private Bitmap bitmap;
+
+    public WFCViewer(Renderer renderer) {
+        BufferedImage image = null;
+        try {
+            image = ImageIO.read(new File("res/city-2.png"));
+        } catch (IOException e) {
+            System.out.println("Failed to load image");
+        }
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+        this.wfc = new WFC(
+            image.getRGB(0, 0, width, height, null, 0, width),
+            width,
+            height,
+            3
+        );
+
+        this.bitmap = new Bitmap(
+            renderer,
+            this.wfc.get_image_width(),
+            this.wfc.get_image_height());
+
+        this.run_wfc();
+        renderer.enqueue_resource(this.bitmap);
+    }
+
+    public void run_wfc() {
+        this.wfc.collapse();
+        this.bitmap.from_int_array(this.wfc.get_pixels());
+        this.bitmap.send_to_gpu();
+    }
+}
+
 public class App {
     public static void main(String[] args) {
         Window window = new Window("EQS debug build", 1280, 720);
         Renderer renderer = new Renderer(window);
-
-        Bitmap bm = new Bitmap(renderer, 64, 64);
-
-        // setup some pixel data?
-        for (int i = 0; i < bm.get_width() * bm.get_height() * 4; i+=4) {
-            bm.pixels.put((byte) 255);
-            bm.pixels.put((byte) 255);
-            bm.pixels.put((byte) 0);
-            bm.pixels.put((byte) 0);
-        }
-
-        bm.pixels.flip();
-        bm.send_to_gpu();
-
-        //renderer.enqueue_resource(bm);
-
-        try {
-            BufferedImage image = ImageIO.read(new File("res/city.png"));
-            int width = image.getWidth();
-            int height = image.getHeight();
-            WFC test = new WFC(
-                image.getRGB(0, 0, width, height, null, 0, width),
-                width,
-                height,
-                4
-            );
-            test.collapse();
-            test.dump_patterns(renderer);
-        } catch (IOException e) {
-            System.out.println("Failed to load image");
-        }
+        WFCViewer viewer = new WFCViewer(renderer);
 
         // Start an event loop and react to events
         SDL_Event evt = new SDL_Event();
@@ -72,7 +79,7 @@ public class App {
                         break;
                     case SDL_KEYDOWN:
                         if (evt.key.keysym.sym == SDLK_SPACE) {
-                            System.out.println("SPACE pressed");
+                            viewer.run_wfc();
                         }
                         break;
                     case SDL_WINDOWEVENT:
@@ -85,4 +92,5 @@ public class App {
 
         SDL_Quit();
     }
+
 }
