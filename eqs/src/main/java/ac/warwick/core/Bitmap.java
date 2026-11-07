@@ -31,7 +31,7 @@ public class Bitmap extends Renderable {
         this.width = width;
         this.height = height;
 
-        // allocate the bytebuffer (fuck you garbage collector)
+        // allocate the bytebuffer (bypass garbage collector)
         this.pixels = ByteBuffer.allocateDirect(this.width * this.height * 4);
 
         // create the GPU texture
