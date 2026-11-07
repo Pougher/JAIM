@@ -37,10 +37,19 @@ public class Bitmap extends Renderable {
         // create the GPU texture
         this.texture = SDL_CreateTexture(
             renderer.get_renderer(),
-            SDL_PIXELFORMAT_RGBA8888,
+            SDL_PIXELFORMAT_BGRA8888,
             SDL_TEXTUREACCESS_STATIC,
             this.width,
             this.height);
+    }
+
+    // copies an RGBA8888 integer array into the bytebuffer
+    public void from_int_array(int[] buffer) {
+        for (int value : buffer) {
+            this.pixels.putInt(value);
+        }
+
+        this.pixels.flip();
     }
 
     // after you have modified the pixels inside of the bytebuffer, you should
@@ -72,5 +81,10 @@ public class Bitmap extends Renderable {
 
     public int get_height() {
         return this.height;
+    }
+
+    public void set_position(int x, int y) {
+        this.x = x;
+        this.y = y;
     }
 }
