@@ -62,7 +62,7 @@ public class App {
         SDL_Event evt = new SDL_Event();
         boolean shouldRun = true;
         while (shouldRun) {
-// render to the screen
+            // render to the screen
             renderer.render();
 
             while (SDL_PollEvent(evt) != 0) {
