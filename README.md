@@ -9,6 +9,10 @@ Run
 ```
 brew install sdl2 maven openjdk
 ```
+and
+```
+export PATH="/opt/homebrew/bin:$PATH" >> ~/.zshrc
+```
 
 ### RENDERING API!!!!!
 ![](res/netanyahu.png)
