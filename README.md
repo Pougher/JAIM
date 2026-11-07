@@ -3,7 +3,7 @@
 
 
 ### RENDERING API!!!!!
-![](res/netanyahu.png)
+<img src="res/netanyahu.png" alt="israel?" width="50%"/>
 hi guys; I've written a graphics library which does all of the low level crap
 with a library called SDL (which is pretty cool). Right now, the API is
 structured in the following way:
