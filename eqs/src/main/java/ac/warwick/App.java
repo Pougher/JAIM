@@ -7,6 +7,7 @@ import ac.warwick.wfc.WFC;
 
 // TEST: RENDERABLES
 import ac.warwick.core.Bitmap;
+import ac.warwick.core.Label;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -29,7 +30,7 @@ class WFCViewer {
     public WFCViewer(Renderer renderer) {
         BufferedImage image = null;
         try {
-            image = ImageIO.read(new File("res/city-2.png"));
+            image = ImageIO.read(new File("res/flower.png"));
         } catch (IOException e) {
             System.out.println("Failed to load image");
         }
@@ -65,13 +66,12 @@ public class App {
         Renderer renderer = new Renderer(window);
         WFCViewer viewer = new WFCViewer(renderer);
 
+        renderer.enqueue_resource(new Label(renderer, "res/sixseven.png", 700, 0));
+
         // Start an event loop and react to events
         SDL_Event evt = new SDL_Event();
         boolean shouldRun = true;
         while (shouldRun) {
-            // render to the screen
-            renderer.render();
-
             while (SDL_PollEvent(evt) != 0) {
                 switch (evt.type) {
                     case SDL_QUIT:
@@ -83,11 +83,14 @@ public class App {
                         }
                         break;
                     case SDL_WINDOWEVENT:
-                        System.out.println("Window event " + evt.window.event);
+                        break;
                     default:
                         break;
                 }
             }
+
+            // render to the screen
+            renderer.render();
         }
 
         SDL_Quit();
