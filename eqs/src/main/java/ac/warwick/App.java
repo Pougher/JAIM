@@ -3,8 +3,15 @@ package ac.warwick;
 import ac.warwick.core.Window;
 import ac.warwick.core.Renderer;
 
+import ac.warwick.wfc.WFC;
+
 // TEST: RENDERABLES
 import ac.warwick.core.Bitmap;
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 
 import io.github.libsdl4j.api.event.SDL_Event;
 import static io.github.libsdl4j.api.Sdl.SDL_Quit;
@@ -33,13 +40,29 @@ public class App {
         bm.pixels.flip();
         bm.send_to_gpu();
 
-        renderer.enqueue_resource(bm);
+        //renderer.enqueue_resource(bm);
+
+        try {
+            BufferedImage image = ImageIO.read(new File("res/city.png"));
+            int width = image.getWidth();
+            int height = image.getHeight();
+            WFC test = new WFC(
+                image.getRGB(0, 0, width, height, null, 0, width),
+                width,
+                height,
+                4
+            );
+            test.collapse();
+            test.dump_patterns(renderer);
+        } catch (IOException e) {
+            System.out.println("Failed to load image");
+        }
 
         // Start an event loop and react to events
         SDL_Event evt = new SDL_Event();
         boolean shouldRun = true;
         while (shouldRun) {
-            // render to the screen
+// render to the screen
             renderer.render();
 
             while (SDL_PollEvent(evt) != 0) {
