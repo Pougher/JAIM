@@ -4,6 +4,12 @@
 Do you want to run the program? I hope so. Do `make && make run`
 Recompilation? `make`.
 
+## Homebrew is not shady
+Run
+```
+brew install sdl2 maven openjdk
+```
+
 ### RENDERING API!!!!!
 ![](res/netanyahu.png)
 hi guys; I've written a graphics library which does all of the low level crap
