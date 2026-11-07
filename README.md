@@ -10,6 +10,7 @@ hi guys; I've written a graphics library which does all of the low level crap
 with a library called SDL (which is pretty cool). Right now, the API is
 structured in the following way:
 
+
 `ac.warwick.core.Renderer`: This is the "renderer". Just give it a renderable
 object and it will shove it on the screen on the next frame. This is done by
 queuing a resource to be rendered with the
