@@ -87,4 +87,8 @@ public class Bitmap extends Renderable {
         this.x = x;
         this.y = y;
     }
+
+    public void destroy() {
+        SDL_DestroyTexture(this.texture);
+    }
 }
