@@ -52,6 +52,7 @@ public class Renderer {
 
     // removes a resource from the rendering pipeline
     public void dequeue_resource(long id) {
+        this.renderables.get(id).destroy();
         this.renderables.remove(id);
     }
 

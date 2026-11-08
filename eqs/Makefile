@@ -1,5 +1,5 @@
 ifeq ($(OS),Windows_NT)
-	JFLAGS := -jar target/eqs-1.0-SNAPSHOT.jar
+	JFLAGS := -Djava.awt.headless=true -jar target/eqs-1.0-SNAPSHOT.jar
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)

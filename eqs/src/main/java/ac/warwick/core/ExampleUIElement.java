@@ -21,4 +21,8 @@ public class ExampleUIElement extends Renderable {
     // for rendering
     public void update() {
     }
+
+    // called when the object is deleted
+    public void destroy() {
+    }
 }
