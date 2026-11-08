@@ -118,7 +118,6 @@ public class WFCSerializer {
     // Converts building data into JSON.
     @SuppressWarnings("unchecked")
     public void serialize(String path) {
-
         Building[] buildings = this.find_buildings();
 
         JSONObject output = new JSONObject();

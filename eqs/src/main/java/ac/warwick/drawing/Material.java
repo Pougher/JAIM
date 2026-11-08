@@ -15,7 +15,7 @@ public enum Material {
     STONE   (6, "Stone",    0x7D8EB8);
 
     public static final int EMPTY     = 0;
-    public static final int EMPTY_RGB = 0x000000;
+    public static final int EMPTY_RGB = 0xffffff;
     public static final int MAX_ID    = values().length;
 
     private final int id;
