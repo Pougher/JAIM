@@ -36,8 +36,10 @@ public final class WfcImageGenerator {
     public BufferedImage generate(BufferedImage sample, int variant) {
         WFC wfc = newWfc(sample, patternSize);
         if (!wfc.collapse()) {
-            throw new IllegalStateException("WFC could not find a contradiction-free output (variant " + variant + ")");
+            throw new IllegalStateException(
+                "WFC could not find a contradiction-free output (variant " + variant + ")");
         }
+
         return toImage(wfc);
     }
 

@@ -1,6 +1,7 @@
 package ac.warwick.core;
 
 import ac.warwick.core.Renderer;
+import ac.warwick.wfc.WFCSerializer;
 import ac.warwick.wfc.WFCViewer;
 import ac.warwick.App;
 import ac.warwick.core.Label;
@@ -25,6 +26,7 @@ import static io.github.libsdl4j.api.event.SDL_EventType.SDL_KEYDOWN;
 
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -35,6 +37,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import javax.imageio.ImageIO;
 
 /**
  * Shows the most recently submitted drawing, then on SPACE generates four WFC variants of it
@@ -143,7 +147,34 @@ public final class WFCScreen implements Screen {
         if (variants == null || pending != null || variants.get(index) == null) {
             return;
         }
+
         System.out.println("Selected variant " + (index + 1));
+        BufferedImage image = this.variants.get(index).raw();
+
+        File outputfile = new File("image.jpg");
+        try { ImageIO.write(image, "png", outputfile); } catch (Exception e) {}
+
+        // turn the buffered image into int[]
+        int width = image.getWidth();
+        int height = image.getHeight();
+        System.out.println("W" + width + "H" + height);
+
+        int[] pixels = image.getRGB(
+            0,
+            0,
+            width,
+            height,
+            null,
+            0,
+            width
+        );
+
+        System.out.println("SERIALIZING");
+
+        // save it to JSON
+        WFCSerializer serializer = new WFCSerializer(
+            pixels, width, height);
+        serializer.serialize("buildings.json");
     }
 
     private List<Variant> generateBatch(BufferedImage sample) {
@@ -158,7 +189,12 @@ public final class WFCScreen implements Screen {
                     System.err.println("[WFCScreen] variant " + v + " attempt " + (attempt + 1) + " failed: " + e.getMessage());
                 }
             }
-            out.add(result == null ? null : new Variant(result, UiGraphics.fitNearest(result, TILE_PX)));
+
+            out.add(
+                result == null ? null :
+                new Variant(
+                    result,
+                    UiGraphics.fitNearest(result, TILE_PX)));
         }
         return out;
     }
