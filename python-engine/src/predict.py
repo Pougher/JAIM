@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import math
 
@@ -47,7 +46,6 @@ def predict_building(building: dict) -> dict:
         total_height_m
         min_wall_index_pct
         vs30_shakemap
-        soft_storey
 
     Returns:
         Dictionary containing damage probability
@@ -102,20 +100,7 @@ def predict_building(building: dict) -> dict:
     if input_data["vs30_shakemap"] == 0:
         raise ValueError("VS30 must be positive.")
 
-    # Validate categorical input.
-    soft_storey = str(
-        input_data["soft_storey"]
-    ).strip().upper()
-
-    if soft_storey not in {"Y", "N"}:
-        raise ValueError(
-            "soft_storey must be 'Y' or 'N'."
-        )
-
-    input_data["soft_storey"] = soft_storey
-
     # Convert inputs into a DataFrame.
-    # The pipeline expects the original training features.
     X = pd.DataFrame(
         [input_data],
         columns=FEATURES
@@ -124,7 +109,7 @@ def predict_building(building: dict) -> dict:
     # Generate prediction probability.
     probabilities = model.predict_proba(X)[0]
 
-    # Find the probability corresponding to class 1 (Y).
+    # Find the probability corresponding to class 1.
     critical_index = list(model.classes_).index(1)
 
     critical_probability = float(
@@ -150,8 +135,7 @@ if __name__ == "__main__":
         "pga_shakemap_g": 0.52,
         "total_height_m": 24.0,
         "min_wall_index_pct": 0.0007,
-        "vs30_shakemap": 440,
-        "soft_storey": "N"
+        "vs30_shakemap": 440
     }
 
     result = predict_building(example_building)

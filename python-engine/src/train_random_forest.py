@@ -51,9 +51,7 @@ NUMERICAL_FEATURES = [
     "vs30_shakemap",
 ]
 
-CATEGORICAL_FEATURES = [
-    "soft_storey",
-]
+CATEGORICAL_FEATURES = []
 
 FEATURES = NUMERICAL_FEATURES + CATEGORICAL_FEATURES
 TARGET = "critical_damage"
