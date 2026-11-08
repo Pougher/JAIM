@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.json.simple.JSONObject;
+import java.io.FileReader;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 public class WFCSerializer {
     private int[] pixels;
@@ -140,6 +143,93 @@ public class WFCSerializer {
 
         } catch (IOException e) {
             System.err.println("Failed to export buildings:");
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+ * Generates an earthquake heatmap by replacing building pixels
+ * with colours corresponding to their predicted damage severity.
+ *
+ * @param resultsPath path to earthquake_results.json
+ * @return modified pixel array
+ */
+    /**
+ * Recolours building pixels according to their predicted
+ * earthquake damage severity.
+ *
+ * Modifies the existing pixels array directly.
+ */
+    public void generateHeatmap(String resultsPath) {
+
+        try (FileReader reader = new FileReader(resultsPath)) {
+
+            JSONParser parser = new JSONParser();
+            JSONObject root = (JSONObject) parser.parse(reader);
+
+            JSONObject buildings = (JSONObject) root.get("buildings");
+
+            if (buildings == null) {
+                throw new IllegalArgumentException(
+                    "No buildings found in earthquake results."
+                );
+            }
+
+            for (Object key : buildings.keySet()) {
+
+                JSONObject building = (JSONObject) buildings.get(key);
+
+                int x = ((Number) building.get("x")).intValue();
+                int y = ((Number) building.get("y")).intValue();
+                int width = ((Number) building.get("width")).intValue();
+                int height = ((Number) building.get("height")).intValue();
+
+                int damageLevel =
+                    ((Number) building.get("damage_level")).intValue();
+
+                int colour;
+
+                switch (damageLevel) {
+                    case 1:
+                        colour = 0xFF2ECC71;
+                        break;
+                    case 2:
+                        colour = 0xFFF1C40F;
+                        break;
+                    case 3:
+                        colour = 0xFFE67E22;
+                        break;
+                    case 4:
+                        colour = 0xFFE74C3C;
+                        break;
+                    case 5:
+                        colour = 0xFF8E0000;
+                        break;
+                    default:
+                        continue;
+                }
+
+                for (int py = y; py < y + height; py++) {
+                    for (int px = x; px < x + width; px++) {
+
+                        if (px < 0 || px >= output_width
+                            || py < 0 || py >= output_height) {
+                            continue;
+                        }
+
+                        pixels[px + py * output_width] = colour;
+                    }
+                }
+            }
+
+            System.out.println(
+                "[WFCSerializer] Earthquake heatmap generated successfully."
+            );
+
+        } catch (IOException | ParseException e) {
+            System.err.println(
+                "[WFCSerializer] Failed to generate earthquake heatmap."
+            );
             e.printStackTrace();
         }
     }
