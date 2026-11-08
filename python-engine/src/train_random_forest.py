@@ -7,7 +7,12 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.inspection import permutation_importance
+from sklearn.model_selection import (
+    StratifiedKFold,
+    cross_val_predict,
+    cross_validate,
+)
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -15,6 +20,7 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
     roc_auc_score,
+    confusion_matrix,
 )
 
 
@@ -41,14 +47,11 @@ df = pd.read_csv(DATA_FILE)
 NUMERICAL_FEATURES = [
     "pga_shakemap_g",
     "total_height_m",
-    "floor_area_m2",
-    "column_index_pct",
     "min_wall_index_pct",
     "vs30_shakemap",
 ]
 
 CATEGORICAL_FEATURES = [
-    "captive_columns",
     "soft_storey",
 ]
 
@@ -66,7 +69,7 @@ print(f"Features: {len(FEATURES)}")
 print(f"Critical damage cases: {y.sum()}")
 
 
-#  Preprocessing
+# Preprocessing
 
 # Decision trees do not require numerical standardisation.
 # Categorical variables still need numerical encoding.
@@ -118,6 +121,118 @@ cv = StratifiedKFold(
     shuffle=True,
     random_state=42,
 )
+
+
+# Permutation feature importance
+
+print("\n========== PERMUTATION FEATURE IMPORTANCE ==========")
+
+importance_results = []
+
+for fold, (train_index, validation_index) in enumerate(
+    cv.split(X, y), start=1
+):
+
+    X_train = X.iloc[train_index]
+    X_validation = X.iloc[validation_index]
+
+    y_train = y.iloc[train_index]
+    y_validation = y.iloc[validation_index]
+
+    model.fit(X_train, y_train)
+
+    importance = permutation_importance(
+        model,
+        X_validation,
+        y_validation,
+        scoring="roc_auc",
+        n_repeats=30,
+        random_state=42,
+        n_jobs=-1,
+    )
+
+    for feature, mean, std in zip(
+        FEATURES,
+        importance.importances_mean,
+        importance.importances_std,
+    ):
+        importance_results.append({
+            "Fold": fold,
+            "Feature": feature,
+            "Importance": mean,
+            "Std": std,
+        })
+
+importance_df = pd.DataFrame(importance_results)
+
+summary = (
+    importance_df
+    .groupby("Feature")
+    .agg(
+        Mean_Importance=("Importance", "mean"),
+        Std_Across_Folds=("Importance", "std"),
+    )
+    .sort_values("Mean_Importance", ascending=False)
+)
+
+print(
+    summary.to_string(
+        formatters={
+            "Mean_Importance": "{:.4f}".format,
+            "Std_Across_Folds": "{:.4f}".format,
+        }
+    )
+)
+
+
+# Overfitting diagnostics
+
+print("\n========== OVERFITTING DIAGNOSTICS ==========")
+
+cv_results = cross_validate(
+    model,
+    X,
+    y,
+    cv=cv,
+    scoring={
+        "roc_auc": "roc_auc",
+        "balanced_accuracy": "balanced_accuracy",
+    },
+    return_train_score=True,
+)
+
+train_auc = cv_results["train_roc_auc"].mean()
+validation_auc = cv_results["test_roc_auc"].mean()
+
+train_balanced_accuracy = (
+    cv_results["train_balanced_accuracy"].mean()
+)
+
+validation_balanced_accuracy = (
+    cv_results["test_balanced_accuracy"].mean()
+)
+
+print(f"Training ROC-AUC: {train_auc:.3f}")
+print(f"Validation ROC-AUC: {validation_auc:.3f}")
+print(f"ROC-AUC gap: {train_auc - validation_auc:.3f}")
+
+print(
+    f"Training balanced accuracy: "
+    f"{train_balanced_accuracy:.3f}"
+)
+
+print(
+    f"Validation balanced accuracy: "
+    f"{validation_balanced_accuracy:.3f}"
+)
+
+print(
+    f"Balanced accuracy gap: "
+    f"{train_balanced_accuracy - validation_balanced_accuracy:.3f}"
+)
+
+
+# Generate out-of-fold probabilities
 
 predicted_probabilities = cross_val_predict(
     model,
@@ -184,9 +299,7 @@ print(
 )
 
 
-# --------------------------------------------------
-# 8. Evaluate at the default threshold
-# --------------------------------------------------
+# Evaluate at the default threshold
 
 predictions = (
     predicted_probabilities >= 0.5
@@ -204,7 +317,6 @@ print(
 )
 
 print("\nConfusion matrix:")
-from sklearn.metrics import confusion_matrix
 print(confusion_matrix(y, predictions))
 
 print("\n========== COMPLETE ==========")
