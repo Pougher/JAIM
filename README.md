@@ -4,8 +4,8 @@
 3) get json
 4) focus purely on python with a similar json structure
 
-### Run the program
-Do: `make && make run`
+### To run the program
+Do `make && make run`.
 To recompile: `make`.
 
 ## Using Homebrew
@@ -18,7 +18,7 @@ and
 export PATH="/opt/homebrew/bin:$PATH" >> ~/.zshrc
 ```
 
-### RENDERING API!!!!!
+### Rendering API
 Custom graphics library which does all of the low level work
 using a library called SDL. The API is
 structured in the following way:
@@ -37,10 +37,9 @@ on the next frame**.
 
 `ac.warwick.core.Window`: A wrapper for the window handle. That's it!
 
-### RENDERABLES
-Under this approach we are using renderables. These
-are little objects which implement rendering/update behaviour, which can be
-added to the renderer for drawing. Currently we have
+### Renderables
+Renderables are little objects which implement rendering/update behaviour,
+which can be added to the renderer for drawing. Currently we have
 - `Bitmap`: Renders a bitmap texture to the screen at specified coordinates. This
   bitmap texture has a specific size (image dimensions in pixels).
   Bitmaps also have an $x$ and $y$
