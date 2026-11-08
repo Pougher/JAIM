@@ -3,10 +3,14 @@ package ac.warwick.core;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontFormatException;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Off-screen rasterisation of UI elements (text, buttons, swatches) into opaque
@@ -16,13 +20,14 @@ import java.awt.image.BufferedImage;
  * the methods degrade to text-free placeholder shapes instead of throwing, so the UI keeps working.
  */
 public final class UiGraphics {
-    public static final Color BLACK         = Color.BLACK;
+    public static final Color BLACK         = new Color(0x282828);
     public static final Color WHITE         = Color.WHITE;
     public static final Color PRIMARY_BLUE  = new Color(0x5B9BD5);
     public static final Color DISABLED_GREY = new Color(0x5A5A5A);
     public static final Color MUTED_TEXT    = new Color(0xB4B4B4);
 
-    private static final String FONT_FAMILY   = Font.SANS_SERIF;
+    private static final String FONT_FAMILY =
+        "res/fonts/JetBrainsMono-Regular.ttf";
     private static final int    TEXT_PAD_X    = 6;
     private static final int    TEXT_PAD_Y    = 4;
     private static volatile boolean fontsUsable = true;
@@ -33,11 +38,22 @@ public final class UiGraphics {
         }
     }
 
-    private UiGraphics() { }
+    private UiGraphics() {}
+
+    private static Font load_font() {
+        try {
+            return Font.createFont(
+                Font.TRUETYPE_FONT,
+                new File("res/fonts/JetBrainsMono-Regular.ttf")
+            );
+        } catch (IOException | FontFormatException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /** Text on a solid background, sized to fit the string. */
     public static BufferedImage text(String text, int pointSize, Color fg, Color bg) {
-        Font font = new Font(FONT_FAMILY, Font.PLAIN, pointSize);
+        Font font = load_font().deriveFont((float)pointSize);
         Dimension size = measure(text, font);
         if (size == null) return placeholder(text, pointSize, fg, bg);
 
@@ -49,7 +65,7 @@ public final class UiGraphics {
     /** A filled rectangle of the given size with centred text (plain rectangle if fonts fail). */
     public static BufferedImage button(String text, int width, int height, int pointSize, Color bg, Color fg) {
         BufferedImage img = opaque(width, height, bg);
-        drawCentred(img, text, new Font(FONT_FAMILY, Font.PLAIN, pointSize), fg);
+        drawCentred(img, text, load_font().deriveFont((float)pointSize), fg);
         return img;
     }
 
@@ -108,6 +124,13 @@ public final class UiGraphics {
             g.setFont(font);
             g.setColor(fg);
             FontMetrics fm = g.getFontMetrics();
+
+            System.out.println("Font: " + font.getFontName());
+            System.out.println("Requested size: " + font.getSize2D());
+            System.out.println("Actual height: " + fm.getHeight());
+            System.out.println("Ascent: " + fm.getAscent());
+            System.out.println("Descent: " + fm.getDescent());
+
             int x = (img.getWidth() - fm.stringWidth(text)) / 2;
             int y = (img.getHeight() - fm.getHeight()) / 2 + fm.getAscent();
             g.drawString(text, x, y);

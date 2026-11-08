@@ -1,12 +1,15 @@
-### TODO OVERNIGHT
-1) build button class
-2) detect buildings
-3) get json
-4) focus purely on python with a similar json structure
+### About the Project
+1) Draw a city on the canvas
+2) Pick a variant given to you by the wave function collapse algorithm
+3) Run earthquake simulations on the variant city
+4) See your results!
 
-### To run the program
+### To run the program on Mac OS or Linux
 Do `make && make run`.
 To recompile: `make`.
+
+## To run the program on Windows Subsystem for Linux
+Do `make` then `make run JFLAGS="-jar target/eqs-1.0-SNAPSHOT.jar"`
 
 ## Using Homebrew
 Run
