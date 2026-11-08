@@ -4,6 +4,7 @@ import math
 import random
 from pathlib import Path
 from predict import predict_building
+from collections import Counter
 
 # --------------------------------------------------
 # PATHS
@@ -13,6 +14,54 @@ ROOT = Path(__file__).resolve().parents[2]
 BUILDINGS_FILE = ROOT / "eqs" / "buildings.json"
 RESULTS_FILE = ROOT / "eqs" / "earthquake_results.json"
 
+
+# --------------------------------------------------
+# BUILDING MATERIALS
+# --------------------------------------------------
+
+# Replace these example colours with the ACTUAL colours
+# used in your Java drawing palette.
+MATERIAL_COLOURS = {
+    0x808080: "steel",
+    0XA67A6B: "timber",
+    0xADD8E6: "glass",
+    0xE8E2B8: "concrete",
+    0x7B242A: "brick",
+    0x7D8EB8: "stone",
+}
+
+MATERIAL_WEIGHTS = {
+    "steel": 1.00,
+    "timber": 0.85,
+    "brick": 0.65,
+    "concrete": 0.50,
+    "stone": 0.35,
+    "glass": 0.15,
+}
+
+
+def detect_material(building: dict) -> str:
+    pixels = building["materials"]
+
+    colours = [
+        int(pixel) & 0xFFFFFF
+        for pixel in pixels
+    ]
+
+    counts = Counter(colours)
+
+    print("Building material colours:")
+    for colour, count in counts.most_common(6):
+        print(f"  #{colour:06X}: {count} pixels")
+
+    dominant_colour, _ = counts.most_common(1)[0]
+
+    if dominant_colour not in MATERIAL_COLOURS:
+        raise ValueError(
+            f"Unknown building colour: #{dominant_colour:06X}"
+        )
+
+    return MATERIAL_COLOURS[dominant_colour]
 
 # --------------------------------------------------
 # EARTHQUAKE GENERATION
@@ -90,6 +139,24 @@ def classify_damage(probability):
     else:
         return "Near / complete destruction"
 
+def adjust_for_material(
+    probability: float,
+    material: str
+) -> float:
+    #Apply a heuristic material adjustment to RF probability.
+
+    concrete_baseline = MATERIAL_WEIGHTS["concrete"]
+    material_weight = MATERIAL_WEIGHTS[material]
+
+    adjustment_factor = 0.25
+
+    adjusted_probability = (
+        probability
+        + adjustment_factor * (concrete_baseline - material_weight)
+    )
+
+    return max(0.0, min(1.0, adjusted_probability))
+
 def run_simulation():
 
     buildings = load_buildings()
@@ -149,8 +216,22 @@ def run_simulation():
 
         prediction = predict_building(model_input)
 
-        probability = prediction["critical_damage_probability"]
+        # Get material from the building's pixel colours.
+        material = detect_material(building)
+
+        # Original Random Forest prediction.
+        rf_probability = prediction["critical_damage_probability"]
+
+        # Adjust prediction using material strength.
+        probability = adjust_for_material(
+            rf_probability,
+            material
+        )
+
         damage_description = classify_damage(probability)
+
+        # Convert adjusted probability into a visual level.
+        damage_level = min(5, int(probability * 5) + 1)
 
         # Convert probability into a numeric visual level.
         damage_level = min(5, int(probability * 5) + 1)
@@ -160,6 +241,7 @@ def run_simulation():
             "distance_km": round(distance_km, 4),
             "pga": round(pga, 4),
             "vs30": round(vs30, 2),
+            "material": material,
             "damage_probability": round(probability, 4),
             "damage_level": damage_level,
             "damage_description": damage_description,
