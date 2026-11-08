@@ -1,4 +1,4 @@
-package ac.warwick;
+package ac.warwick.core;
 
 import io.github.libsdl4j.api.event.SDL_Event;
 

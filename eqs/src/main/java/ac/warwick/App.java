@@ -2,6 +2,8 @@ package ac.warwick;
 
 import ac.warwick.core.Window;
 import ac.warwick.core.Renderer;
+import ac.warwick.core.ScreenManager;
+import ac.warwick.core.HomeScreen;
 
 import ac.warwick.wfc.WFC;
 import ac.warwick.wfc.WFCViewer;
