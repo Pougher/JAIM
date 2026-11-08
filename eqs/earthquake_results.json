@@ -1,0 +1,101 @@
+{
+    "earthquake": {
+        "epicentre_x": 22.12,
+        "epicentre_y": 9.61,
+        "magnitude": 6.7,
+        "depth_km": 16.15
+    },
+    "buildings": {
+        "0": {
+            "materials": [
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584
+            ],
+            "x": 10,
+            "width": 1,
+            "y": 16,
+            "height": 18,
+            "distance_km": 0.0964,
+            "pga": 0.5223,
+            "vs30": 281.23,
+            "material": "steel",
+            "damage_probability": 0.473,
+            "damage_level": 3,
+            "damage_description": "Moderate damage",
+            "predicted_class": "Y"
+        },
+        "1": {
+            "materials": [
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584
+            ],
+            "x": 23,
+            "width": 1,
+            "y": 13,
+            "height": 21,
+            "distance_km": 0.0698,
+            "pga": 0.5403,
+            "vs30": 447.79,
+            "material": "steel",
+            "damage_probability": 0.6597,
+            "damage_level": 4,
+            "damage_description": "Severe damage",
+            "predicted_class": "Y"
+        },
+        "2": {
+            "materials": [
+                4286611584,
+                4286611584,
+                4286611584,
+                4286611584
+            ],
+            "x": 28,
+            "width": 1,
+            "y": 30,
+            "height": 4,
+            "distance_km": 0.1164,
+            "pga": 0.5155,
+            "vs30": 668.32,
+            "material": "steel",
+            "damage_probability": 0.3296,
+            "damage_level": 2,
+            "damage_description": "Slight damage",
+            "predicted_class": "N"
+        }
+    }
+}
