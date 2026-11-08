@@ -141,4 +141,26 @@ public final class UiGraphics {
             System.err.println("[UiGraphics] Text rendering unavailable; falling back to placeholders: " + cause);
         }
     }
+
+        /**
+     * Nearest-neighbour scale to fit inside a {@code box}x{@code box} square, preserving aspect
+     * ratio and using an integer factor when enlarging so cells stay crisp.
+     */
+    public static BufferedImage fitNearest(BufferedImage src, int box) {
+        double scale = Math.min((double) box / src.getWidth(), (double) box / src.getHeight());
+        if (scale >= 1) scale = Math.floor(scale);
+        int w = Math.max(1, (int) Math.round(src.getWidth() * scale));
+        int h = Math.max(1, (int) Math.round(src.getHeight() * scale));
+
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++) {
+            int sy = Math.min(src.getHeight() - 1, (int) (y / scale));
+            for (int x = 0; x < w; x++) {
+                int sx = Math.min(src.getWidth() - 1, (int) (x / scale));
+                out.setRGB(x, y, src.getRGB(sx, sy));
+            }
+        }
+        return out;
+    }
+
 }

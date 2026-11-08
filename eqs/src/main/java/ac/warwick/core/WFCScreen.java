@@ -5,6 +5,8 @@ import ac.warwick.wfc.WFCViewer;
 import ac.warwick.core.Label;
 import ac.warwick.core.UiGraphics;
 import ac.warwick.drawing.BuildingGrid;
+import ac.warwick.drawing.DrawingStore;
+import ac.warwick.wfc.WfcImageGenerator;
 import ac.warwick.drawing.GridCsv;
 import ac.warwick.drawing.GridImages;
 
@@ -21,56 +23,98 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 /**
- * Shows the drawing that was just submitted (loaded back from disk and validated),
- * then hands over to the existing WFC implementation on SPACE. H returns home.
+ * Shows the most recently submitted drawing, then on SPACE generates four WFC variants of it
+ * and displays them in a 2x2 grid. H returns to the home screen.
+ *
+ * <p>Generation runs on a background thread so the window stays responsive; results are turned
+ * into textures on the main thread in {@link #update}, which is the only thread allowed to touch
+ * SDL. A second SPACE while a batch is running is ignored.</p>
  */
 public final class WFCScreen implements Screen {
+    // ---- layout ---------------------------------------------------------------------------
     private static final int PREVIEW_CELL_PX = 20;
-    private static final int PREVIEW_Y       = 80;
+    private static final int CONTENT_Y       = 60;
+    private static final int TILE_GAP        = 16;
+    private static final int TILE_PX         = 272;                                   // 2*272+16 = 560 tall
+    private static final int GRID_PX         = 2 * TILE_PX + TILE_GAP;
+    private static final int GRID_X          = (App.WIDTH - GRID_PX) / 2;
     private static final int CAPTION_Y       = App.HEIGHT - 56;
     private static final int CAPTION_POINT   = 20;
     private static final int GRID_LINE_RGB   = 0xDDDDDD;
-    private static final String CONTROLS     = "SPACE: generate with WFC     H: home";
+
+    // ---- generation -----------------------------------------------------------------------
+    private static final int VARIANTS            = 4;
+    private static final int ATTEMPTS_PER_VARIANT = 5;   // WFC can hit contradictions; retry a few times
+    private static final String CONTROLS = "SPACE: generate 4 variants     H: home";
 
     private final Renderer renderer;
     private final ScreenManager screens;
-    private final Path drawingPath;
+    private final Path drawingsDir;
+    private final WfcImageGenerator generator = new WfcImageGenerator();
 
-    private WFCViewer viewer;          // created lazily on the first SPACE so each visit starts fresh
+    private BufferedImage input;                 // validated latest.png, null if loading failed
+    private ExecutorService worker;
+    private Future<List<BufferedImage>> pending; // non-null while a batch is in flight
+    private Label caption;
 
-    /** Uses the most recently submitted drawing ({@code latest.csv}). */
+    /** Uses the most recently submitted drawing in the default drawings directory. */
     public WFCScreen(Renderer renderer, ScreenManager screens) {
-        this(renderer, screens, GridCsv.latest(GridCsv.defaultDirectory()));
+        this(renderer, screens, GridCsv.defaultDirectory());
     }
 
-    public WFCScreen(Renderer renderer, ScreenManager screens, Path drawingPath) {
+    public WFCScreen(Renderer renderer, ScreenManager screens, Path drawingsDir) {
         this.renderer = renderer;
         this.screens = screens;
-        this.drawingPath = drawingPath;
+        this.drawingsDir = drawingsDir;
     }
+
+    // ---- Screen ---------------------------------------------------------------------------
 
     @Override
     public void onEnter() {
-        viewer = null;
-        String caption;
+        worker = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "wfc-worker");
+            t.setDaemon(true);
+            return t;
+        });
+        pending = null;
+        input = null;
+
+        String text;
         try {
-            BuildingGrid grid = GridCsv.load(drawingPath);           // validated: 24x24, values 0..6
-            BufferedImage preview = GridImages.render(grid, PREVIEW_CELL_PX, GRID_LINE_RGB);
+            DrawingStore.Loaded loaded = DrawingStore.loadLatest(drawingsDir);
+            input = loaded.image;
+            BufferedImage preview = UiGraphics.fitNearest(loaded.image, GRID_PX);   // crisp integer upscale
             renderer.enqueue_resource(new Label(renderer, preview,
-                    (App.WIDTH - preview.getWidth()) / 2, PREVIEW_Y));
-            caption = "Loaded " + drawingPath.getFileName() + "     |     " + CONTROLS;
+                    (App.WIDTH - preview.getWidth()) / 2, CONTENT_Y));
+            text = "Loaded " + loaded.pngPath.getFileName()
+                    + (loaded.pngRepaired ? " (rebuilt from CSV)" : "") + "     |     " + CONTROLS;
         } catch (IOException | RuntimeException e) {
-            System.err.println("[WFCScreen] Could not load drawing '" + drawingPath + "': " + e.getMessage());
-            caption = "No valid drawing could be loaded     |     " + CONTROLS;
+            System.err.println("[WFCScreen] Could not load latest drawing from '" + drawingsDir + "': " + e.getMessage());
+            text = "No valid drawing could be loaded. Press H and submit a drawing first.";
         }
-        enqueueCaption(caption);
+        caption = new Label(renderer, captionImage(text), 0, CAPTION_Y);
+        centreCaption();
+        renderer.enqueue_resource(caption);
     }
 
     @Override
     public void onExit() {
-        renderer.clear_resources();   // removes the preview and everything the viewer put on screen
-        viewer = null;
+        if (pending != null) pending.cancel(true);
+        pending = null;
+        if (worker != null) worker.shutdownNow();
+        worker = null;
+        caption = null;
+        renderer.clear_resources();
     }
 
     @Override
@@ -78,28 +122,107 @@ public final class WFCScreen implements Screen {
         if (evt.type != SDL_KEYDOWN) return;
 
         if (evt.key.keysym.sym == SDLK_SPACE) {
-            generate();
+            startGeneration();
         } else if (evt.key.keysym.sym == SDLK_H) {
             screens.setScreen(new HomeScreen(renderer, screens));
         }
     }
 
     @Override
-    public void update(double dt) { }
+    public void update(double dt) {
+        if (pending == null || !pending.isDone()) return;
 
-    private void generate() {
-        if (viewer == null) {
-            renderer.clear_resources();          // hand the whole screen to the WFC output
-            viewer = new WFCViewer(renderer);
-            viewer.run_wfc();
-            enqueueCaption(CONTROLS);            // queued last so it draws on top
-        } else {
-            viewer.run_wfc();                    // regenerate, exactly as before
+        List<BufferedImage> results;
+        try {
+            results = pending.get();
+        } catch (CancellationException | InterruptedException e) {
+            Thread.currentThread().interrupt();
+            pending = null;
+            return;
+        } catch (ExecutionException e) {
+            pending = null;
+            System.err.println("[WFCScreen] Generation failed: " + e.getCause());
+            setCaption("Generation failed: " + e.getCause().getMessage() + "     |     " + CONTROLS);
+            return;
         }
+        pending = null;
+        showVariants(results);
     }
 
-    private void enqueueCaption(String text) {
-        BufferedImage img = UiGraphics.text(text, CAPTION_POINT, UiGraphics.MUTED_TEXT, UiGraphics.BLACK);
-        renderer.enqueue_resource(new Label(renderer, img, (App.WIDTH - img.getWidth()) / 2, CAPTION_Y));
+    // ---- generation -----------------------------------------------------------------------
+
+    private void startGeneration() {
+        if (pending != null) return;                      // a batch is already running
+        if (input == null) {
+            setCaption("Nothing to generate from. Press H and submit a drawing first.");
+            return;
+        }
+        final BufferedImage sample = input;
+        setCaption("Generating " + VARIANTS + " variants...");
+        pending = worker.submit(() -> generateBatch(sample));
+    }
+
+    /** Runs on the worker thread. Never touches SDL. Null entries mark variants that failed. */
+    private List<BufferedImage> generateBatch(BufferedImage sample) {
+        List<BufferedImage> out = new ArrayList<>(VARIANTS);
+        for (int v = 0; v < VARIANTS; v++) {
+            BufferedImage result = null;
+            for (int attempt = 0; attempt < ATTEMPTS_PER_VARIANT && result == null; attempt++) {
+                if (Thread.currentThread().isInterrupted()) return out;
+                try {
+                    result = generator.generate(sample, v);
+                } catch (RuntimeException e) {
+                    System.err.println("[WFCScreen] variant " + v + " attempt " + (attempt + 1) + " failed: " + e.getMessage());
+                }
+            }
+            out.add(result == null ? null : UiGraphics.fitNearest(result, TILE_PX));
+        }
+        return out;
+    }
+
+    /** Runs on the main thread: swaps the preview for the 2x2 grid of variants. */
+    private void showVariants(List<BufferedImage> tiles) {
+        renderer.clear_resources();                        // also destroys the old caption's texture
+        int failed = 0;
+
+        for (int i = 0; i < VARIANTS; i++) {
+            int col = i % 2;
+            int row = i / 2;
+            int cellX = GRID_X + col * (TILE_PX + TILE_GAP);
+            int cellY = CONTENT_Y + row * (TILE_PX + TILE_GAP);
+
+            BufferedImage tile = i < tiles.size() ? tiles.get(i) : null;
+            if (tile == null) {
+                failed++;
+                tile = UiGraphics.button("Variant " + (i + 1) + " failed", TILE_PX, TILE_PX,
+                        22, UiGraphics.DISABLED_GREY, UiGraphics.WHITE);
+            }
+            renderer.enqueue_resource(new Label(renderer, tile,
+                    cellX + (TILE_PX - tile.getWidth()) / 2,
+                    cellY + (TILE_PX - tile.getHeight()) / 2));
+        }
+
+        String text = failed == 0
+                ? "Generated " + VARIANTS + " variants     |     " + CONTROLS
+                : failed + " of " + VARIANTS + " variants failed (contradiction)     |     " + CONTROLS;
+        caption = new Label(renderer, captionImage(text), 0, CAPTION_Y);
+        centreCaption();
+        renderer.enqueue_resource(caption);
+    }
+
+    // ---- caption helpers ------------------------------------------------------------------
+
+    private static BufferedImage captionImage(String text) {
+        return UiGraphics.text(text, CAPTION_POINT, UiGraphics.MUTED_TEXT, UiGraphics.BLACK);
+    }
+
+    private void setCaption(String text) {
+        if (caption == null) return;
+        caption.setImage(captionImage(text));
+        centreCaption();
+    }
+
+    private void centreCaption() {
+        caption.setPosition((App.WIDTH - caption.getWidth()) / 2, CAPTION_Y);
     }
 }

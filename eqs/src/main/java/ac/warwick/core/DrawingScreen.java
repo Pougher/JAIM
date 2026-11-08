@@ -6,8 +6,10 @@ import ac.warwick.core.Label;
 import ac.warwick.core.Renderer;
 import ac.warwick.core.UiGraphics;
 import ac.warwick.drawing.BuildingGrid;
-import ac.warwick.drawing.GridCsv;
-import ac.warwick.drawing.GridImages;
+
+import ac.warwick.drawing.DrawingStore;
+import ac.warwick.drawing.GridCsv; 
+import ac.warwick.drawing.GridImages; 
 import ac.warwick.drawing.Material;
 
 import io.github.libsdl4j.api.event.SDL_Event;
@@ -218,21 +220,17 @@ public final class DrawingScreen implements Screen {
         }
     }
 
-    private void submit() {
+        private void submit() {
         if (submitting) return;
-        if (grid.isEmpty()) {                             // defensive: button is disabled in this state anyway
+        if (grid.isEmpty()) {
             setStatus("Draw at least one cell before submitting");
             return;
         }
         submitting = true;
         try {
-            Path csv = GridCsv.save(grid, GridCsv.defaultDirectory());
-            try {
-                GridImages.savePngAlongside(grid, csv);  // convenience export for image-based tooling
-            } catch (IOException e) {
-                System.err.println("[DrawingScreen] CSV saved but PNG export failed: " + e.getMessage());
-            }
-            screens.setScreen(new WFCScreen(renderer, screens, csv));
+            DrawingStore.Saved saved = DrawingStore.save(grid, GridCsv.defaultDirectory());
+            System.out.println("[DrawingScreen] Saved " + saved.csv + " and " + saved.latestPng);
+            screens.setScreen(new WFCScreen(renderer, screens));
         } catch (IOException | RuntimeException e) {
             submitting = false;
             System.err.println("[DrawingScreen] Failed to save drawing: " + e);
