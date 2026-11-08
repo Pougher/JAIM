@@ -9,6 +9,7 @@ import ac.warwick.wfc.WFCViewer;
 // TEST: RENDERABLES
 import ac.warwick.core.Bitmap;
 import ac.warwick.core.Label;
+import ac.warwick.core.Button;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -24,45 +25,58 @@ import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_KP_ENTER;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_S;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_SPACE;
 
-public class App {
+// unsure if safe
+import static io.github.libsdl4j.api.event.SDL_EventType.SDL_QUIT;
+import static io.github.libsdl4j.api.event.SdlEvents.SDL_PollEvent;
+
+
+public final class App {
+
+    public static final String TITLE  = "Earthquake Simulator";
+    public static final int    WIDTH  = 1280;
+    public static final int    HEIGHT = 720;
+
+    private App() { }
+
+
     public static void main(String[] args) {
-        Window window = new Window("EQS debug build", 1280, 720);
+        // Java2D is only used to rasterise text/UI into off-screen images. Headless mode stops AWT
+        // from initialising a native toolkit that could compete with SDL for the main thread (macOS).
+        System.setProperty("java.awt.headless", "true");
+
+        Window window = new Window(TITLE, WIDTH, HEIGHT);
         Renderer renderer = new Renderer(window);
-        WFCViewer viewer = new WFCViewer(renderer);
+        ScreenManager screens = new ScreenManager();
 
-        // this is how you use the Label class btw
-        renderer.enqueue_resource(
-            new Label(renderer, "res/city-3.png", 700, 0));
+        screens.setScreen(new HomeScreen(renderer, screens));
 
-        // Start an event loop and react to events
         SDL_Event evt = new SDL_Event();
         boolean shouldRun = true;
-        while (shouldRun) {
-            while (SDL_PollEvent(evt) != 0) {
-                switch (evt.type) {
-                    case SDL_QUIT:
-                        shouldRun = false;
-                        break;
-                    case SDL_KEYDOWN:
-                        if (evt.key.keysym.sym == SDLK_SPACE) {
-                            viewer.run_wfc();
-                        }
-                        if (evt.key.keysym.sym == SDLK_S) {
-                            viewer.serialize();
-                        }
-                        break;
-                    case SDL_WINDOWEVENT:
-                        break;
-                    default:
-                        break;
+        long last = System.nanoTime();
+
+        try {
+            while (shouldRun) {
+                // 1. EVENTS: drain everything that happened since the last frame
+                while (SDL_PollEvent(evt) != 0) {
+                    if (evt.type == SDL_QUIT) {
+                        shouldRun = false;            // closing the window works on every screen
+                    } else {
+                        screens.handleEvent(evt);     // everything else goes to the active screen
+                    }
                 }
+
+                // 2. UPDATE: apply any pending screen switch, then run the screen's logic
+                long now = System.nanoTime();
+                double dt = (now - last) / 1_000_000_000.0;
+                last = now;
+                screens.update(dt);
+
+                // 3. RENDER: draw (and update) everything in the renderer's queue
+                renderer.render();
             }
-
-            // render to the screen
-            renderer.render();
+        } finally {
+            SDL_Quit();
         }
-
-        SDL_Quit();
     }
-
 }
+

@@ -59,4 +59,15 @@ public class Renderer {
     public SDL_Renderer get_renderer() {
         return this.renderer;
     }
+
+    public void clear_resources() {
+    for (Renderable renderable : this.renderables.values()) {
+        try {
+            renderable.destroy();
+        } catch (Exception e) {
+            System.err.println("Failed to destroy renderable: " + e.getMessage());
+        }
+    }
+    this.renderables.clear();
+}
 }
