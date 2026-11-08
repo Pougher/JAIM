@@ -15,6 +15,10 @@ import org.json.simple.JSONObject;
 import ac.warwick.core.Bitmap;
 import ac.warwick.core.Renderer;
 import netscape.javascript.JSException;
+import java.io.FileReader;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
 
 public class WFCViewer {
     private WFC wfc;
@@ -22,6 +26,13 @@ public class WFCViewer {
 
     private int output_width;
     private int output_height;
+
+    //Earthquake damage colours
+    private static final int DAMAGE_LEVEL_1 = 0xFF22A06B; // Green
+    private static final int DAMAGE_LEVEL_2 = 0xFFD6B72C; // Yellow
+    private static final int DAMAGE_LEVEL_3 = 0xFFE58A32; // Orange
+    private static final int DAMAGE_LEVEL_4 = 0xFFD94A45; // Red
+    private static final int DAMAGE_LEVEL_5 = 0xFF8D2525; // Dark red
 
     public WFCViewer(Renderer renderer) {
         BufferedImage image = null;
@@ -47,6 +58,7 @@ public class WFCViewer {
             renderer, this.output_width, this.output_height);
 
         this.run_wfc();
+        this.apply_earthquake_damage();
         renderer.enqueue_resource(this.bitmap);
     }
 
@@ -165,6 +177,64 @@ public class WFCViewer {
         try (FileWriter file = new FileWriter("buildings.json")) {
             output.writeJSONString(file);
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private int get_damage_colour(int level) {
+        switch (level) {
+            case 1: return DAMAGE_LEVEL_1;
+            case 2: return DAMAGE_LEVEL_2;
+            case 3: return DAMAGE_LEVEL_3;
+            case 4: return DAMAGE_LEVEL_4;
+            case 5: return DAMAGE_LEVEL_5;
+            default: return 0xFFFFFFFF;
+        }
+    }
+
+    public void apply_earthquake_damage() {
+
+        JSONParser parser = new JSONParser();
+
+        try (FileReader reader = new FileReader("earthquake_results.json")) {
+
+            JSONObject results = (JSONObject) parser.parse(reader);
+            JSONObject building_results = (JSONObject) results.get("buildings");
+
+            Building[] buildings = this.find_buildings();
+
+            for (int i = 0; i < buildings.length; i++) {
+
+                Building building = buildings[i];
+
+                JSONObject result = (JSONObject) building_results.get(
+                    String.valueOf(i)
+                );
+
+                if (result == null) {
+                    System.out.println("Missing earthquake result for building " + i);
+                    continue;
+                }
+
+                int damage_level = ((Number) result.get("damage_level")).intValue();
+                int damage_colour = get_damage_colour(damage_level);
+
+                // Recolour every pixel belonging to this building.
+                for (int x = building.x; x < building.x + building.width; x++) {
+
+                    for (int y = building.y; y < building.y + building.height; y++) {
+
+                        this.bitmap.set_pixel(x, y, damage_colour);
+                    }
+                }
+            }
+
+            this.bitmap.send_to_gpu();
+
+            System.out.println("Earthquake damage visualisation applied.");
+
+        } catch (IOException | ParseException e) {
+            System.out.println("Failed to load earthquake results.");
             e.printStackTrace();
         }
     }

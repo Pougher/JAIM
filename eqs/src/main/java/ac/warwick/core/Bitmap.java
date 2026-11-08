@@ -91,4 +91,12 @@ public class Bitmap extends Renderable {
     public void destroy() {
         SDL_DestroyTexture(this.texture);
     }
+
+    public void set_pixel(int x, int y, int colour){
+        if(x < 0 || x >= width || y < 0 ||y > height){
+            return;
+        }
+        int index = (x + y * width) * 4;
+        pixels.putInt(index, colour);   
+    }
 }
