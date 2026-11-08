@@ -7,15 +7,11 @@ import org.json.simple.JSONObject;
 // going to be generated. Materials is basically just the building's data packed
 // as an array
 public class Building {
-    public int x;
-    public int y;
     public int width;
     public int height;
     public int[] materials;
 
-    public Building(int x, int y, int width, int height, int[] data) {
-        this.x = x;
-        this.y = y;
+    public Building(int width, int height, int[] data) {
         this.width = width;
         this.height = height;
         this.materials = data;
@@ -23,7 +19,7 @@ public class Building {
 
     public void print() {
         System.out.println(
-            "BUILDING :: Position: (" + x + ", " + y + ") Width: " + this.width + "Height: " + this.height);
+            "BUILDING :: Width: " + this.width + "Height: " + this.height);
     }
 
     public JSONObject serialize() {
@@ -33,9 +29,7 @@ public class Building {
         for (int material : this.materials) {
             mats.add(Integer.toUnsignedLong(material));
         }
-        
-        obj.put("x", this.x);
-        obj.put("y", this.y);
+
         obj.put("width", this.width);
         obj.put("height", this.height);
         obj.put("materials", mats);
