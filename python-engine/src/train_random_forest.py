@@ -1,4 +1,4 @@
-
+import joblib
 from pathlib import Path
 
 import pandas as pd
@@ -320,3 +320,17 @@ print("\nConfusion matrix:")
 print(confusion_matrix(y, predictions))
 
 print("\n========== COMPLETE ==========")
+
+# Train final model on the complete dataset
+print("\n========== SAVING FINAL MODEL ==========")
+
+model.fit(X, y)
+
+MODEL_DIR = ROOT / "python-engine" / "models"
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+MODEL_PATH = MODEL_DIR / "random_forest_pipeline.joblib"
+
+joblib.dump(model, MODEL_PATH)
+
+print(f"Model saved to: {MODEL_PATH}")
