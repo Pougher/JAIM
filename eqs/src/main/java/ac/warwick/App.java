@@ -9,6 +9,7 @@ import ac.warwick.wfc.WFCViewer;
 // TEST: RENDERABLES
 import ac.warwick.core.Bitmap;
 import ac.warwick.core.Label;
+import ac.warwick.core.Button;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -33,6 +34,9 @@ public class App {
         // this is how you use the Label class btw
         renderer.enqueue_resource(
             new Label(renderer, "res/city-3.png", 700, 0));
+
+        //renderer.enqueue_resource(new Button(renderer, "res/flower.png", 700, 0,
+        //    () -> System.out.println("Button clicked!")));
 
         // Start an event loop and react to events
         SDL_Event evt = new SDL_Event();
