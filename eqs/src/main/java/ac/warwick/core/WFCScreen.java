@@ -15,6 +15,10 @@ import io.github.libsdl4j.api.event.SDL_Event;
 import static io.github.libsdl4j.api.event.SDL_EventType.*;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_H;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_SPACE;
+import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_1;
+import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_2;
+import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_3;
+import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_4;
 
 // unclear if necessary
 import static io.github.libsdl4j.api.event.SDL_EventType.SDL_KEYDOWN;
@@ -55,7 +59,7 @@ public final class WFCScreen implements Screen {
     // ---- generation -----------------------------------------------------------------------
     private static final int VARIANTS            = 4;
     private static final int ATTEMPTS_PER_VARIANT = 20;   // WFC can hit contradictions; retry a few times
-    private static final String CONTROLS = "SPACE: generate 4 variants     H: home";
+    private static final String CONTROLS = "SPACE: generate 4 variants     1-4: select H: home";
 
     private final Renderer renderer;
     private final ScreenManager screens;
@@ -64,8 +68,10 @@ public final class WFCScreen implements Screen {
 
     private BufferedImage input;                 // validated latest.png, null if loading failed
     private ExecutorService worker;
-    private Future<List<BufferedImage>> pending; // non-null while a batch is in flight
+    private Future<List<Variant>> pending; // non-null while a batch is in flight
     private Label caption;
+    private List<Variant> variants;
+    private record Variant(BufferedImage raw, BufferedImage tile) {}
 
     /** Uses the most recently submitted drawing in the default drawings directory. */
     public WFCScreen(Renderer renderer, ScreenManager screens) {
@@ -115,6 +121,7 @@ public final class WFCScreen implements Screen {
         if (worker != null) worker.shutdownNow();
         worker = null;
         caption = null;
+        variants = null;
         renderer.clear_resources();
     }
 
@@ -122,18 +129,45 @@ public final class WFCScreen implements Screen {
     public void handleEvent(SDL_Event evt) {
         if (evt.type != SDL_KEYDOWN) return;
 
-        if (evt.key.keysym.sym == SDLK_SPACE) {
+        int key = evt.key.keysym.sym;
+        if (key == SDLK_SPACE) {
             startGeneration();
-        } else if (evt.key.keysym.sym == SDLK_H) {
+        } else if (key == SDLK_H) {
             screens.setScreen(new HomeScreen(renderer, screens));
+        } else if (key >= SDLK_1 && key <= SDLK_4) {
+            selectVariant(key - SDLK_1);
         }
+    }
+
+    public void selectVariant(int index) {
+        if (variants == null || pending != null || variants.get(index) == null) {
+            return;
+        }
+        System.out.println("Selected variant " + (index + 1));
+    }
+
+    private List<Variant> generateBatch(BufferedImage sample) {
+        List<Variant> out = new ArrayList<>(VARIANTS);
+        for (int v = 0; v < VARIANTS; v++) {
+            BufferedImage result = null;
+            for (int attempt = 0; attempt < ATTEMPTS_PER_VARIANT && result == null; attempt++) {
+                if (Thread.currentThread().isInterrupted()) return out;
+                try {
+                    result = generator.generate(sample, v);
+                } catch (RuntimeException e) {
+                    System.err.println("[WFCScreen] variant " + v + " attempt " + (attempt + 1) + " failed: " + e.getMessage());
+                }
+            }
+            out.add(result == null ? null : new Variant(result, UiGraphics.fitNearest(result, TILE_PX)));
+        }
+        return out;
     }
 
     @Override
     public void update(double dt) {
         if (pending == null || !pending.isDone()) return;
 
-        List<BufferedImage> results;
+        List<Variant> results;
         try {
             results = pending.get();
         } catch (CancellationException | InterruptedException e) {
@@ -164,7 +198,7 @@ public final class WFCScreen implements Screen {
     }
 
     /** Runs on the worker thread. Never touches SDL. Null entries mark variants that failed. */
-    private List<BufferedImage> generateBatch(BufferedImage sample) {
+    /**private List<BufferedImage> generateBatch(BufferedImage sample) {
         List<BufferedImage> out = new ArrayList<>(VARIANTS);
         for (int v = 0; v < VARIANTS; v++) {
             BufferedImage result = null;
@@ -179,10 +213,11 @@ public final class WFCScreen implements Screen {
             out.add(result == null ? null : UiGraphics.fitNearest(result, TILE_PX));
         }
         return out;
-    }
+    }*/
 
     /** Runs on the main thread: swaps the preview for the 2x2 grid of variants. */
-    private void showVariants(List<BufferedImage> tiles) {
+    private void showVariants(List<Variant> variants) {
+        this.variants = variants;
         renderer.clear_resources();                        // also destroys the old caption's texture
         int failed = 0;
 
@@ -192,7 +227,9 @@ public final class WFCScreen implements Screen {
             int cellX = GRID_X + col * (TILE_PX + TILE_GAP);
             int cellY = CONTENT_Y + row * (TILE_PX + TILE_GAP);
 
-            BufferedImage tile = i < tiles.size() ? tiles.get(i) : null;
+            Variant v = i < variants.size() ? variants.get(i) : null;
+            BufferedImage tile = (v == null) ? null : v.tile();
+
             if (tile == null) {
                 failed++;
                 tile = UiGraphics.button("Variant " + (i + 1) + " failed", TILE_PX, TILE_PX,
