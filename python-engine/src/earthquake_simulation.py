@@ -23,7 +23,7 @@ RESULTS_FILE = ROOT / "eqs" / "earthquake_results.json"
 # used in your Java drawing palette.
 MATERIAL_COLOURS = {
     0x808080: "steel",
-    0XA67A6B: "timber",
+    0xA67A5B: "timber",
     0xADD8E6: "glass",
     0xE8E2B8: "concrete",
     0x7B242A: "brick",
@@ -57,9 +57,8 @@ def detect_material(building: dict) -> str:
     dominant_colour, _ = counts.most_common(1)[0]
 
     if dominant_colour not in MATERIAL_COLOURS:
-        raise ValueError(
-            f"Unknown building colour: #{dominant_colour:06X}"
-        )
+        print(f"Warning: Unknown material colour #{dominant_colour:06X}")
+        return "concrete"
 
     return MATERIAL_COLOURS[dominant_colour]
 

@@ -1,17 +1,19 @@
+
 package ac.warwick.wfc;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-// class which acts as a data storage structure for the buildings which are
-// going to be generated. Materials is basically just the building's data packed
-// as an array
 public class Building {
+    public int x;
+    public int y;
     public int width;
     public int height;
     public int[] materials;
 
-    public Building(int width, int height, int[] data) {
+    public Building(int x, int y, int width, int height, int[] data) {
+        this.x = x;
+        this.y = y;
         this.width = width;
         this.height = height;
         this.materials = data;
@@ -19,9 +21,12 @@ public class Building {
 
     public void print() {
         System.out.println(
-            "BUILDING :: Width: " + this.width + "Height: " + this.height);
+            "BUILDING :: Position: (" + x + ", " + y + ") "
+            + "Width: " + width + " Height: " + height
+        );
     }
 
+    @SuppressWarnings("unchecked")
     public JSONObject serialize() {
         JSONObject obj = new JSONObject();
         JSONArray mats = new JSONArray();
@@ -30,10 +35,12 @@ public class Building {
             mats.add(Integer.toUnsignedLong(material));
         }
 
+        obj.put("x", this.x);
+        obj.put("y", this.y);
         obj.put("width", this.width);
         obj.put("height", this.height);
         obj.put("materials", mats);
-        
+
         return obj;
     }
 }

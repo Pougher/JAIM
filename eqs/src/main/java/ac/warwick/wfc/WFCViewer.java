@@ -69,4 +69,21 @@ public class WFCViewer {
         this.bitmap.send_to_gpu();
         return true;
     }
+    /**
+ * Exports the generated city's buildings to JSON.
+ */
+    public void serialize(String path) {
+        if (this.pixels == null) {
+            System.err.println("[WFCViewer] No WFC output available to serialize.");
+            return;
+        }
+
+        WFCSerializer serializer = new WFCSerializer(
+            this.pixels,
+            this.output_width,
+            this.output_height
+        );
+
+        serializer.serialize(path);
+    }
 }
