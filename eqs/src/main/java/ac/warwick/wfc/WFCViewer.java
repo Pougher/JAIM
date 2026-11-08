@@ -119,6 +119,8 @@ public class WFCViewer {
         }
 
         return new Building(
+            start_x,
+            this.output_height - height,
             width,
             height,
             materials
