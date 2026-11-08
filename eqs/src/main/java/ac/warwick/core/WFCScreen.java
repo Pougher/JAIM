@@ -157,7 +157,6 @@ public final class WFCScreen implements Screen {
         // turn the buffered image into int[]
         int width = image.getWidth();
         int height = image.getHeight();
-        System.out.println("W" + width + "H" + height);
 
         int[] pixels = image.getRGB(
             0,
@@ -168,8 +167,6 @@ public final class WFCScreen implements Screen {
             0,
             width
         );
-
-        System.out.println("SERIALIZING");
 
         // save it to JSON
         WFCSerializer serializer = new WFCSerializer(
