@@ -1,7 +1,8 @@
-package ac.warwick;
+package ac.warwick.core;
 
 import ac.warwick.core.Renderer;
 import ac.warwick.wfc.WFCViewer;
+import ac.warwick.App;
 import ac.warwick.core.Label;
 import ac.warwick.core.UiGraphics;
 import ac.warwick.drawing.BuildingGrid;
@@ -45,10 +46,10 @@ import java.util.concurrent.Future;
  */
 public final class WFCScreen implements Screen {
     // ---- layout ---------------------------------------------------------------------------
-    private static final int PREVIEW_CELL_PX = 20;
-    private static final int CONTENT_Y       = 60;
+    private static final int PREVIEW_CELL_PX = 10;
+    private static final int CONTENT_Y       = 80;
     private static final int TILE_GAP        = 16;
-    private static final int TILE_PX         = 272;                                   // 2*272+16 = 560 tall
+    private static final int TILE_PX         = 272;   // 2*272+16 = 560 tall
     private static final int GRID_PX         = 2 * TILE_PX + TILE_GAP;
     private static final int GRID_X          = (App.WIDTH - GRID_PX) / 2;
     private static final int CAPTION_Y       = App.HEIGHT - 56;
@@ -57,7 +58,7 @@ public final class WFCScreen implements Screen {
 
     // ---- generation -----------------------------------------------------------------------
     private static final int VARIANTS            = 4;
-    private static final int ATTEMPTS_PER_VARIANT = 5;   // WFC can hit contradictions; retry a few times
+    private static final int ATTEMPTS_PER_VARIANT = 20;   // WFC can hit contradictions; retry a few times
     private static final String CONTROLS = "SPACE: generate 4 variants     1-4: select H: home";
 
     private final Renderer renderer;

@@ -1,5 +1,6 @@
-package ac.warwick;
+package ac.warwick.core;
 
+import ac.warwick.App;
 import ac.warwick.core.Button;
 import ac.warwick.core.GridCanvas;
 import ac.warwick.core.Label;
