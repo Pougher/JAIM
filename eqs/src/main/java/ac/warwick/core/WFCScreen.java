@@ -12,6 +12,8 @@ import ac.warwick.wfc.WfcImageGenerator;
 import ac.warwick.drawing.GridCsv;
 import ac.warwick.drawing.GridImages;
 
+import java.awt.Graphics2D;
+
 import io.github.libsdl4j.api.event.SDL_Event;
 import static io.github.libsdl4j.api.event.SDL_EventType.*;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_H;
@@ -20,6 +22,8 @@ import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_1;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_2;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_3;
 import static io.github.libsdl4j.api.keycode.SDL_Keycode.SDLK_4;
+
+
 
 // unclear if necessary
 import static io.github.libsdl4j.api.event.SDL_EventType.SDL_KEYDOWN;
@@ -172,6 +176,54 @@ public final class WFCScreen implements Screen {
         WFCSerializer serializer = new WFCSerializer(
             pixels, width, height);
         serializer.serialize("buildings.json");
+
+        String command = "python3 python-engine/src/earthquake_simulator.py";
+        try {
+            Process p = Runtime.getRuntime().exec(command);
+        } catch(IOException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        serializer.generateHeatmap("earthquake_results.json", index);
+        BufferedImage heatmapImage = new BufferedImage(
+            width,
+            height,
+            BufferedImage.TYPE_INT_ARGB
+        );
+
+        heatmapImage.setRGB(
+            0,
+            0,
+            width,
+            height,
+            serializer.pixels,
+            0,
+            width
+        );
+
+        // upscale the image so we can see it
+        float scale = 17.0f;;
+
+        BufferedImage upscaled = new BufferedImage(
+            (int)((float)heatmapImage.getWidth() * scale),
+            (int)((float)heatmapImage.getHeight() * scale),
+            BufferedImage.TYPE_INT_ARGB
+        );
+
+        Graphics2D g = upscaled.createGraphics();
+
+        g.drawImage(
+            heatmapImage,
+            0, 0,
+            (int)((float)heatmapImage.getWidth() * scale),
+            (int)((float)heatmapImage.getHeight() * scale),
+            null
+        );
+
+        g.dispose();
+
+        renderer.enqueue_resource(new Label(renderer, upscaled, 360, 80));
     }
 
     private List<Variant> generateBatch(BufferedImage sample) {
